@@ -8,14 +8,15 @@ import {
   inviteUrl,
   markSent,
   removeGuest,
-  renameGuest,
   renameHousehold,
   resetLink,
+  setHouseholdSide,
   setPlusOne,
+  updateGuest,
   useAdmin,
 } from '../../data/admin';
 import { useContent } from '../../data/content';
-import type { Invite } from '../../lib/model';
+import type { Guest, Invite, RsvpStatus } from '../../lib/model';
 import type { Household } from '../../lib/sync';
 import { CloseIcon } from '../../components/Icons';
 
@@ -320,7 +321,9 @@ function ShareDrawer({ h, inv, onClose }: { h: Household; inv: Invite; onClose: 
 
 function EditHousehold({ h, inv, onClose }: { h: Household; inv?: Invite; onClose: () => void }) {
   const a = useAdmin();
+  const c = useContent();
   const ws = a.workspaceId!;
+  const side = h.members[0]?.side ?? 'both';
   const [name, setName] = useState(h.name);
   const [newMember, setNewMember] = useState('');
   return (
@@ -340,10 +343,24 @@ function EditHousehold({ h, inv, onClose }: { h: Household; inv?: Invite; onClos
           </div>
         </label>
       </form>
+      <label className="afield">
+        Side
+        <select value={side} onChange={(e) => setHouseholdSide(ws, h, e.target.value)}>
+          <option value="yours">{c.couple.b}’s side</option>
+          <option value="hers">{c.couple.a}’s side</option>
+          <option value="both">Shared</option>
+        </select>
+      </label>
+      {inv?.response && (
+        <p className="admin-muted small">
+          They answered online on {new Date(inv.response.submittedAt).toLocaleDateString()}. Changes you make here stay until they send a new answer from their
+          link.
+        </p>
+      )}
       <div className="afield">
         Guests
         {[...h.members, ...h.plusOnes].map((m) => (
-          <MemberRow key={m.id} id={m.id} name={m.name} tag={m.plusOneOf ? 'plus-one' : m.rsvp} canRemove={h.members.length > 1 || !!m.plusOneOf} ws={ws} />
+          <MemberCard key={m.id} g={m} canRemove={h.members.length > 1 || !!m.plusOneOf} ws={ws} />
         ))}
       </div>
       <form
@@ -378,19 +395,69 @@ function EditHousehold({ h, inv, onClose }: { h: Household; inv?: Invite; onClos
   );
 }
 
-function MemberRow({ id, name, tag, canRemove, ws }: { id: string; name: string; tag: string; canRemove: boolean; ws: string }) {
-  const [v, setV] = useState(name);
-  useEffect(() => setV(name), [name]);
+const RSVP_OPTIONS: [RsvpStatus, string][] = [
+  ['pending', 'Awaiting'],
+  ['confirmed', 'Attending'],
+  ['declined', 'Declined'],
+  ['maybe', 'Maybe'],
+];
+
+/** One person: every GuestList field, saved as soon as it changes (text fields on blur). */
+function MemberCard({ g, canRemove, ws }: { g: Guest; canRemove: boolean; ws: string }) {
+  const [draft, setDraft] = useState({ name: g.name, dietary: g.dietary ?? '', contact: g.contact ?? '', notes: g.notes ?? '' });
+  useEffect(() => setDraft({ name: g.name, dietary: g.dietary ?? '', contact: g.contact ?? '', notes: g.notes ?? '' }), [g.name, g.dietary, g.contact, g.notes]);
+  const save = (k: keyof typeof draft) => {
+    const v = draft[k].trim();
+    if (k === 'name' && !v) return setDraft({ ...draft, name: g.name });
+    if (v !== ((g[k] as string | undefined) ?? '')) updateGuest(ws, g.id, { [k]: v });
+  };
+  const text = (k: keyof typeof draft, label: string, placeholder = '') => (
+    <label className="afield">
+      {label}
+      <input value={draft[k]} placeholder={placeholder} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} onBlur={() => save(k)} />
+    </label>
+  );
   return (
-    <div className="inline">
-      <input className="ainput" value={v} onChange={(e) => setV(e.target.value)} onBlur={() => v.trim() && v !== name && renameGuest(ws, id, v)} aria-label="Guest name" />
-      <span className="pill pill--soft">{tag}</span>
-      {canRemove && (
-        <button type="button" className="icon-btn" aria-label={`Remove ${name}`} onClick={() => confirm(`Remove ${name}?`) && removeGuest(ws, id)}>
-          <CloseIcon size={14} />
-        </button>
-      )}
-    </div>
+    <fieldset className="member">
+      <legend className="sr-only">{g.name}</legend>
+      <div className="member__head">
+        <input
+          className="ainput member__name"
+          value={draft.name}
+          aria-label="Name"
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+          onBlur={() => save('name')}
+        />
+        {g.plusOneOf && <span className="pill pill--soft">plus-one</span>}
+        {canRemove && (
+          <button type="button" className="icon-btn" aria-label={`Remove ${g.name}`} onClick={() => confirm(`Remove ${g.name}?`) && removeGuest(ws, g.id)}>
+            <CloseIcon size={14} />
+          </button>
+        )}
+      </div>
+      <div className="member__grid">
+        <label className="afield">
+          RSVP
+          <select value={g.rsvp} onChange={(e) => updateGuest(ws, g.id, { rsvp: e.target.value as RsvpStatus })}>
+            {RSVP_OPTIONS.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="afield">
+          Age
+          <select value={g.kind ?? 'adult'} onChange={(e) => updateGuest(ws, g.id, { kind: e.target.value })}>
+            <option value="adult">Adult</option>
+            <option value="child">Child</option>
+          </select>
+        </label>
+        {text('dietary', 'Dietary', 'Vegetarian, allergies…')}
+        {text('contact', 'Contact', 'Phone or email')}
+      </div>
+      {text('notes', 'Notes')}
+    </fieldset>
   );
 }
 

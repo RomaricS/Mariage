@@ -282,6 +282,13 @@ export async function addMember(ws: string, h: Household, name: string) {
 }
 
 export const renameGuest = (ws: string, id: string, name: string) => updateDoc(doc(wsCol(ws, 'guests'), id), { name: name.trim() });
+export const updateGuest = (ws: string, id: string, patch: Partial<Guest>) => updateDoc(doc(wsCol(ws, 'guests'), id), patch);
+
+export async function setHouseholdSide(ws: string, h: Household, side: string) {
+  const batch = writeBatch(db);
+  for (const g of [...h.members, ...h.plusOnes]) batch.update(doc(wsCol(ws, 'guests'), g.id), { side });
+  await batch.commit();
+}
 export const removeGuest = (ws: string, id: string) => deleteDoc(doc(wsCol(ws, 'guests'), id));
 export const renameHousehold = (ws: string, h: Household, name: string) =>
   h.party ? updateDoc(doc(wsCol(ws, 'parties'), h.party.id), { name: name.trim() }) : renameGuest(ws, h.members[0].id, name);
