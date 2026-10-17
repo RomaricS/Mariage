@@ -49,7 +49,7 @@
 .admin-h1 {
   margin: 4px 0 0;
   font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 500;
   font-size: clamp(32px, 4vw, 44px);
 }
 
@@ -773,7 +773,7 @@
 .drawer__title {
   margin: 4px 0 2px;
   font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 500;
   font-size: 30px;
 }
 
