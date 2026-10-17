@@ -31,7 +31,7 @@ export function weddingIcs(c: SiteContent): string {
     dtEnd,
     `SUMMARY:${title}`,
     `LOCATION:${location.replace(/,/g, '\\,')}`,
-    `URL:${window.location.origin}`,
+    'URL:https://kalahandromaric.com',
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');

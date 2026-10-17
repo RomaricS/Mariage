@@ -312,6 +312,9 @@ export async function resetLink(ws: string, inv: Invite, guests: Guest[]) {
   return token;
 }
 
+/** Links always use the real domain, even when the admin is opened from *.web.app or localhost. */
+const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://kalahandromaric.com').replace(/\/$/, '');
+
 export function inviteUrl(token: string) {
-  return `${window.location.origin}/i/${token}`;
+  return `${SITE_URL}/i/${token}`;
 }

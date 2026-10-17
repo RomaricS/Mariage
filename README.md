@@ -1,5 +1,7 @@
 # Kalah & Romaric — wedding website
 
+Live at **https://kalahandromaric.com**
+
 Bilingual (EN/FR) wedding site with private invite links, RSVPs and an admin dashboard.
 June 19, 2027 · The Abby – Kruse Plaza · Auburn, Indiana.
 
@@ -45,6 +47,13 @@ While `/admin` is open it keeps the two sides in step:
    firebase deploy --only hosting:wedding,firestore:rules
    ```
    Then add the site's domain under Authentication → Settings → **Authorized domains** if it isn't listed.
+4b. **Custom domain (kalahandromaric.com, bought on Namecheap).**
+   - Firebase console → Hosting → site `kalah-romaric` → **Add custom domain** → `kalahandromaric.com`.
+   - Firebase shows DNS records (usually two `A` records and a `TXT`). In Namecheap → Domain List → Manage → **Advanced DNS**: delete the default *URL Redirect* and *CNAME www → parkingpage* records, then add exactly what Firebase shows (Host `@`).
+   - Add `www.kalahandromaric.com` too and choose **Redirect to kalahandromaric.com**.
+   - Wait for Firebase to say *Connected* (minutes to a few hours; HTTPS is automatic).
+   - Authentication → Settings → Authorized domains → add `kalahandromaric.com` (and `www.kalahandromaric.com`).
+   - Invite links always use `https://kalahandromaric.com` (set `VITE_SITE_URL` to change it).
 5. **Connect the guest list.** Open `https://<your-site>/admin`, sign in, and paste the GuestList workspace id (the part after `#w=` in your GuestList link). Invite links are created within seconds.
 6. **Fill in the rest** under *Site content*: RSVP deadline, ceremony time, program times, story text and photos, and the registry.
 
