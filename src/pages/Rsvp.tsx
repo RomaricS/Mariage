@@ -135,7 +135,6 @@ function RsvpFlow({ invite }: { invite: Invite }) {
                   <div className="guest-card__who">
                     <span className="avatar">{g.name[0]}</span>
                     <span>{g.name}</span>
-                    {g.child && <span className="child-tag">{t('child')}</span>}
                   </div>
                   <div className="choice" role="group" aria-label={g.name}>
                     <button

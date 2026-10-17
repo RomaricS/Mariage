@@ -30,7 +30,7 @@ const demoInvite = (): Invite => ({
   guests: [
     { id: 'demo-a', name: 'Camille Martin' },
     { id: 'demo-b', name: 'Hugo Martin' },
-    { id: 'demo-c', name: 'Léa Martin', child: true },
+    { id: 'demo-c', name: 'Léa Martin' },
   ],
   plusOneAllowed: true,
   createdAt: 0,

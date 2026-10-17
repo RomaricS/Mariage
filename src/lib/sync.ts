@@ -65,7 +65,7 @@ export function inviteShape(h: Household): Pick<Invite, 'householdKey' | 'househ
   return {
     householdKey: h.key,
     householdName: h.name,
-    guests: h.members.map((m) => ({ id: m.id, name: m.name, child: m.kind === 'child' })),
+    guests: h.members.map((m) => ({ id: m.id, name: m.name })),
     plusOneAllowed: h.plusOneAllowed,
   };
 }
@@ -81,7 +81,7 @@ export function inviteIsStale(invite: Invite, h: Household): boolean {
 
 /** Field by field: Firestore doesn't promise to keep object key order, so no JSON.stringify. */
 function sameGuests(a: Invite['guests'], b: Invite['guests']) {
-  return a.length === b.length && a.every((g, i) => g.id === b[i].id && g.name === b[i].name && !!g.child === !!b[i].child);
+  return a.length === b.length && a.every((g, i) => g.id === b[i].id && g.name === b[i].name);
 }
 
 export interface GuestWrite {

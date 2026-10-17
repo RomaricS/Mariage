@@ -450,13 +450,6 @@ function MemberCard({ g, home, canRemove, ws }: { g: Guest; home: Household; can
             ))}
           </select>
         </label>
-        <label className="afield">
-          Age
-          <select value={g.kind ?? 'adult'} onChange={(e) => updateGuest(ws, g.id, { kind: e.target.value })}>
-            <option value="adult">Adult</option>
-            <option value="child">Child</option>
-          </select>
-        </label>
         {text('dietary', 'Dietary', 'Vegetarian, allergies…')}
         {text('contact', 'Contact', 'Phone or email')}
       </div>
