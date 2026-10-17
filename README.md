@@ -14,13 +14,13 @@ June 19, 2027 · The Abby – Kruse Plaza · Auburn, Indiana.
   - **Guests & invites**: add or edit households, turn plus-ones on or off, and share each link by copy, text, WhatsApp, email or QR code. **Reset link** replaces a link that went to the wrong person.
   - **Site content**: every text on the site in English and French, plus dates, times, registry and FAQ. **Publish** makes changes live with no redeploy.
 
-## How it fits with the GuestList app
+## How the data fits together
 
 The two apps share one Firebase project (`guestlist-wedding-7k3m9`):
 
 | Data | Where | Who can read / write |
 | --- | --- | --- |
-| Guests & parties | `workspaces/<id>/guests`, `/parties` (GuestList's own data) | GuestList app (unchanged) and `/admin` |
+| Guests & parties | `workspaces/<id>/guests`, `/parties` | admins only (`/admin`) |
 | One invite per household | `invites/<token>` | a guest can read **only their own** (by token) and write only their answer; admins everything |
 | Website copy | `site/content` | everyone reads, admins write |
 | Admin settings | `admin/settings` | admins |
@@ -36,7 +36,7 @@ While `/admin` is open it keeps the two sides in step:
 
 1. **Turn on Google sign-in.** Firebase console → Authentication → Sign-in method → enable **Google**.
 2. **Allow yourselves into the admin.** Firestore → start a collection `admins` → add one document per person, with the **document id = your Google email** (no fields needed).
-3. **Hosting site.** The wedding site uses the project's default site (`guestlist-wedding-7k3m9`, see `.firebaserc`), which is also where `kalahandromaric.com` is connected. The GuestList app lives on its own site — see *GuestList app hosting* below.
+3. **Hosting site.** The wedding site uses the project's default site (`guestlist-wedding-7k3m9`, see `.firebaserc`), which is also where `kalahandromaric.com` is connected.
 4. **Build and deploy** the site and the database rules:
    ```bash
    npm install
@@ -51,26 +51,18 @@ While `/admin` is open it keeps the two sides in step:
    - Wait for Firebase to say *Connected* (minutes to a few hours; HTTPS is automatic).
    - Authentication → Settings → Authorized domains → add `kalahandromaric.com` (and `www.kalahandromaric.com`).
    - Invite links always use `https://kalahandromaric.com` (set `VITE_SITE_URL` to change it).
-5. **Connect the guest list.** Open `https://<your-site>/admin`, sign in, and paste the GuestList workspace id (the part after `#w=` in your GuestList link). Invite links are created within seconds.
+5. **Connect the guest list.** Open `https://<your-site>/admin`, sign in, and paste the guest list workspace id (the part after `#w=` in the old GuestList link). Invite links are created within seconds.
 6. **Fill in the rest** under *Site content*: RSVP deadline, ceremony time, program times, story text and photos, and the registry.
 
 Photos: put files in `public/photos/` (e.g. `public/photos/hero.jpg`), redeploy, then use `/photos/hero.jpg` as the photo URL in the admin. Any https image URL also works.
 
-> ⚠️ **Rules are per project.** This repo's `firestore.rules` includes the GuestList rules. From now on deploy rules from **this** repo only. Deploying the GuestList repo's old rules file would block invites and RSVPs.
+> ⚠️ **Rules are per project.** Deploy rules from **this** repo only. The old GuestList repo's rules file would reopen the guest list to anyone and block invites and RSVPs.
 
-> ⚠️ **GuestList privacy.** The GuestList repo is public, and its README contains the workspace link, which gives full read/write access to the guest list. Its `import/*.json` files also list guest names. Make that repo private, or remove those files and move to a new workspace id. Once GuestList also requires sign-in, change the `workspaces` rule to `isAdmin()`.
+> ⚠️ **Old GuestList repo.** It is public and its `import/*.json` files list guest names. Make it private or archive it.
 
-## GuestList app hosting
+## Guest list data
 
-The wedding site took over `guestlist-wedding-7k3m9.web.app`, so the GuestList app needs its own site:
-
-```bash
-firebase hosting:sites:create kr-guestlist --project guestlist-wedding-7k3m9
-# in the GuestList repo, firebase.json → "hosting": { "site": "kr-guestlist", … }
-firebase deploy --only hosting --project guestlist-wedding-7k3m9   # never plain `firebase deploy` there: it would push its old rules
-```
-
-Its link becomes `https://kr-guestlist.web.app/#w=<workspace id>`; the data is unchanged.
+The guest list started in the old GuestList app and still lives where that app put it (`workspaces/<id>/guests`, `/parties`). It is now managed only from `/admin`, and the database rules let admins read it and nobody else. The old GuestList app and its `#w=` link no longer work.
 
 ## Development
 

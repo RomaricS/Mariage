@@ -30,12 +30,11 @@ service cloud.firestore {
         && r.submittedAt is number;
     }
 
-    // GuestList data. The GuestList app still opens it with its workspace link and
-    // no sign-in, so it stays open here; tighten to `isAdmin()` once that app signs in too.
+    // Guest list data (originally created by the GuestList app, now managed only from /admin).
     match /workspaces/{workspaceId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
       match /{document=**} {
-        allow read, write: if true;
+        allow read, write: if isAdmin();
       }
     }
 
