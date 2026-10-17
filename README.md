@@ -36,10 +36,7 @@ While `/admin` is open it keeps the two sides in step:
 
 1. **Turn on Google sign-in.** Firebase console → Authentication → Sign-in method → enable **Google**.
 2. **Allow yourselves into the admin.** Firestore → start a collection `admins` → add one document per person, with the **document id = your Google email** (no fields needed).
-3. **Create the hosting site.** With the Firebase CLI signed in:
-   ```bash
-   firebase hosting:sites:create kalah-romaric   # or another free name; update .firebaserc if different
-   ```
+3. **Hosting site.** The wedding site uses the project's default site (`guestlist-wedding-7k3m9`, see `.firebaserc`), which is also where `kalahandromaric.com` is connected. The GuestList app lives on its own site — see *GuestList app hosting* below.
 4. **Build and deploy** the site and the database rules:
    ```bash
    npm install
@@ -48,7 +45,7 @@ While `/admin` is open it keeps the two sides in step:
    ```
    Then add the site's domain under Authentication → Settings → **Authorized domains** if it isn't listed.
 4b. **Custom domain (kalahandromaric.com, bought on Namecheap).**
-   - Firebase console → Hosting → site `kalah-romaric` → **Add custom domain** → `kalahandromaric.com`.
+   - Firebase console → Hosting → site `guestlist-wedding-7k3m9` → **Add custom domain** → `kalahandromaric.com`.
    - Firebase shows DNS records (usually two `A` records and a `TXT`). In Namecheap → Domain List → Manage → **Advanced DNS**: delete the default *URL Redirect* and *CNAME www → parkingpage* records, then add exactly what Firebase shows (Host `@`).
    - Add `www.kalahandromaric.com` too and choose **Redirect to kalahandromaric.com**.
    - Wait for Firebase to say *Connected* (minutes to a few hours; HTTPS is automatic).
@@ -62,6 +59,18 @@ Photos: put files in `public/photos/` (e.g. `public/photos/hero.jpg`), redeploy,
 > ⚠️ **Rules are per project.** This repo's `firestore.rules` includes the GuestList rules. From now on deploy rules from **this** repo only. Deploying the GuestList repo's old rules file would block invites and RSVPs.
 
 > ⚠️ **GuestList privacy.** The GuestList repo is public, and its README contains the workspace link, which gives full read/write access to the guest list. Its `import/*.json` files also list guest names. Make that repo private, or remove those files and move to a new workspace id. Once GuestList also requires sign-in, change the `workspaces` rule to `isAdmin()`.
+
+## GuestList app hosting
+
+The wedding site took over `guestlist-wedding-7k3m9.web.app`, so the GuestList app needs its own site:
+
+```bash
+firebase hosting:sites:create kr-guestlist --project guestlist-wedding-7k3m9
+# in the GuestList repo, firebase.json → "hosting": { "site": "kr-guestlist", … }
+firebase deploy --only hosting --project guestlist-wedding-7k3m9   # never plain `firebase deploy` there: it would push its old rules
+```
+
+Its link becomes `https://kr-guestlist.web.app/#w=<workspace id>`; the data is unchanged.
 
 ## Development
 

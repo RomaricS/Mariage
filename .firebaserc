@@ -5,7 +5,9 @@
   "targets": {
     "guestlist-wedding-7k3m9": {
       "hosting": {
-        "wedding": ["kalah-romaric"]
+        "wedding": [
+          "guestlist-wedding-7k3m9"
+        ]
       }
     }
   }
