@@ -1,5 +1,14 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import {
+  getAuth,
+  getRedirectResult,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  type User,
+} from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { app, db } from '../firebase';
 import type { Guest, Invite, Party } from '../lib/model';
@@ -15,7 +24,7 @@ import {
 
 const auth = getAuth(app);
 
-export type AuthState = 'loading' | 'signedOut' | 'notAllowed' | 'admin';
+export type AuthState = 'loading' | 'signedOut' | 'notAllowed' | 'rulesBlocked' | 'admin';
 
 interface AdminData {
   auth: AuthState;
@@ -32,7 +41,43 @@ interface AdminData {
 
 const AdminContext = createContext<AdminData | null>(null);
 
-export const signIn = () => signInWithPopup(auth, new GoogleAuthProvider());
+/** Plain-language help for the sign-in errors people actually hit during setup. */
+export function signInHelp(e: unknown): string {
+  const code = (e as { code?: string })?.code ?? '';
+  const host = window.location.hostname;
+  switch (code) {
+    case 'auth/unauthorized-domain':
+      return `This address (${host}) isn’t allowed to sign in yet. Firebase console → Authentication → Settings → Authorized domains → Add domain → ${host}.`;
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is turned off. Firebase console → Authentication → Sign-in method → Google → Enable → Save.';
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'The Google window was closed before finishing. Try again.';
+    case 'auth/network-request-failed':
+      return 'Network error — check your connection and try again.';
+    default:
+      return `Sign-in failed${code ? ` (${code})` : ''}. ${(e as Error)?.message ?? ''}`;
+  }
+}
+
+/** Popup first; if the browser blocks popups (common on phones), fall back to a full-page redirect. */
+export async function signIn() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+    throw e;
+  }
+}
+
+/** Errors from a redirect sign-in surface on the page we come back to. */
+export const redirectResult = () => getRedirectResult(auth);
 export const signOutAdmin = () => signOut(auth);
 
 export function saveWorkspaceId(id: string) {
@@ -58,8 +103,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         try {
           const allowed = await getDoc(doc(db, 'admins', u.email));
           setAuthState(allowed.exists() ? 'admin' : 'notAllowed');
-        } catch {
-          setAuthState('notAllowed');
+        } catch (e) {
+          // permission-denied here means this repo's firestore.rules aren't deployed yet.
+          setAuthState((e as { code?: string }).code === 'permission-denied' ? 'rulesBlocked' : 'notAllowed');
         }
       }),
     [],

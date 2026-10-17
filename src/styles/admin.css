@@ -93,6 +93,23 @@
   font-size: 14px;
 }
 
+.admin-code {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  background: var(--abg);
+  border: 1px solid var(--aline);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  user-select: all;
+}
+
+.admin-gate .admin-alert {
+  margin: 0;
+  text-align: left;
+}
+
 .admin-loading {
   display: flex;
   align-items: center;

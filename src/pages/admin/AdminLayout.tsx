@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { saveWorkspaceId, signIn, signOutAdmin, useAdmin } from '../../data/admin';
+import { redirectResult, saveWorkspaceId, signIn, signInHelp, signOutAdmin, useAdmin } from '../../data/admin';
 import { useContent } from '../../data/content';
 import { Monogram } from '../../components/ui';
 import { GiftIcon, Sparkle } from '../../components/Icons';
@@ -34,6 +34,49 @@ function Gate({ children }: { children: ReactNode }) {
     <div className="admin-gate">
       <div className="admin-gate__card">{children}</div>
     </div>
+  );
+}
+
+function SignIn() {
+  const c = useContent();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    redirectResult().catch((e) => setError(signInHelp(e)));
+  }, []);
+  return (
+    <Gate>
+      <div className="admin-gate__mono">
+        <Monogram a={c.couple.a} b={c.couple.b} />
+      </div>
+      <h1 className="admin-h1">Wedding admin</h1>
+      <p className="admin-muted">
+        For {c.couple.a} &amp; {c.couple.b} only.
+      </p>
+      <button
+        type="button"
+        className="abtn abtn--navy"
+        disabled={busy}
+        onClick={async () => {
+          setError('');
+          setBusy(true);
+          try {
+            await signIn();
+          } catch (e) {
+            setError(signInHelp(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? 'Opening Google…' : 'Sign in with Google'}
+      </button>
+      {error && (
+        <p className="admin-alert" role="alert">
+          {error}
+        </p>
+      )}
+    </Gate>
   );
 }
 
@@ -78,16 +121,19 @@ export default function AdminLayout() {
       </Gate>
     );
   }
-  if (a.auth === 'signedOut') {
+  if (a.auth === 'signedOut') return <SignIn />;
+  if (a.auth === 'rulesBlocked') {
     return (
       <Gate>
-        <div className="admin-gate__mono">
-          <Monogram a={c.couple.a} b={c.couple.b} />
-        </div>
-        <h1 className="admin-h1">Wedding admin</h1>
-        <p className="admin-muted">For Kalah &amp; Romaric only.</p>
-        <button type="button" className="abtn abtn--navy" onClick={() => signIn().catch(() => undefined)}>
-          Sign in with Google
+        <h1 className="admin-h1">Almost there</h1>
+        <p className="admin-muted">
+          You’re signed in as <b>{a.user?.email}</b>, but the database rules from this project aren’t deployed yet, so the admin list can’t be read.
+          From the project folder run:
+        </p>
+        <code className="admin-code">firebase deploy --only firestore:rules</code>
+        <p className="admin-muted small">Then reload this page.</p>
+        <button type="button" className="abtn abtn--outline" onClick={() => signOutAdmin()}>
+          Sign out
         </button>
       </Gate>
     );
@@ -96,13 +142,20 @@ export default function AdminLayout() {
     return (
       <Gate>
         <h1 className="admin-h1">Not on the list</h1>
+        <p className="admin-muted">You’re signed in as</p>
+        <code className="admin-code">{a.user?.email}</code>
         <p className="admin-muted">
-          {a.user?.email} isn’t an admin. Add a document with that exact email as its id in the <code>admins</code> collection (Firebase console), then
-          reload.
+          In Firestore, the <code>admins</code> collection needs a document whose <b>Document ID</b> is exactly that address — all lowercase, no
+          spaces. (Leave “Auto-ID” off; the fields don’t matter.) Then reload.
         </p>
-        <button type="button" className="abtn abtn--outline" onClick={() => signOutAdmin()}>
-          Sign out
-        </button>
+        <div className="row-wrap">
+          <button type="button" className="abtn abtn--navy" onClick={() => window.location.reload()}>
+            Reload
+          </button>
+          <button type="button" className="abtn abtn--outline" onClick={() => signOutAdmin()}>
+            Use another account
+          </button>
+        </div>
       </Gate>
     );
   }
