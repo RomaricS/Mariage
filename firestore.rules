@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// Rules for the whole Firebase project (shared with the GuestList app).
+// Deploying from this repo replaces the rules deployed from GuestList.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // An admin is a signed-in Google user whose email is a document id in /admins.
+    // Add yourselves once in the Firebase console: admins/<your-email> (any fields).
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    function rsvpClosed() {
+      return exists(/databases/$(database)/documents/site/content)
+        && get(/databases/$(database)/documents/site/content).data.get('rsvpClosed', false) == true;
+    }
+
+    function validResponse(r) {
+      return r is map
+        && r.keys().hasOnly(['attendees', 'plusOneName', 'dietary', 'song', 'note', 'lang', 'submittedAt'])
+        && r.attendees is map && r.attendees.size() <= 30
+        && r.dietary is map && r.dietary.size() <= 31
+        && r.plusOneName is string && r.plusOneName.size() <= 120
+        && r.song is string && r.song.size() <= 200
+        && r.note is string && r.note.size() <= 1500
+        && r.lang in ['en', 'fr']
+        && r.submittedAt is number;
+    }
+
+    // GuestList data. The GuestList app still opens it with its workspace link and
+    // no sign-in, so it stays open here; tighten to `isAdmin()` once that app signs in too.
+    match /workspaces/{workspaceId} {
+      allow read, write: if true;
+      match /{document=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // One document per household; the id is the unguessable token in the invite link.
+    // Guests can fetch their own (get) but never list them, and may only write their answer.
+    match /invites/{token} {
+      allow get: if true;
+      allow list, create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openedAt', 'openCount'])
+          && request.resource.data.openCount is int
+        )
+        || (
+          !rsvpClosed()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['response'])
+          && validResponse(request.resource.data.response)
+        );
+    }
+
+    // Public website copy, edited from /admin/content.
+    match /site/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin-only settings (e.g. which GuestList workspace to use).
+    match /admin/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /admins/{email} {
+      allow get: if request.auth != null && request.auth.token.email == email;
+      allow list, write: if false;
+    }
+  }
+}
