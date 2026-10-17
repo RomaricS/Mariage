@@ -5,6 +5,7 @@ import {
   addHousehold,
   addMember,
   deleteHousehold,
+  moveGuest,
   inviteUrl,
   markSent,
   removeGuest,
@@ -360,7 +361,7 @@ function EditHousehold({ h, inv, onClose }: { h: Household; inv?: Invite; onClos
       <div className="afield">
         Guests
         {[...h.members, ...h.plusOnes].map((m) => (
-          <MemberCard key={m.id} g={m} canRemove={h.members.length > 1 || !!m.plusOneOf} ws={ws} />
+          <MemberCard key={m.id} g={m} home={h} canRemove={h.members.length > 1 || !!m.plusOneOf} ws={ws} />
         ))}
       </div>
       <form
@@ -403,9 +404,12 @@ const RSVP_OPTIONS: [RsvpStatus, string][] = [
 ];
 
 /** One person: every GuestList field, saved as soon as it changes (text fields on blur). */
-function MemberCard({ g, canRemove, ws }: { g: Guest; canRemove: boolean; ws: string }) {
+function MemberCard({ g, home, canRemove, ws }: { g: Guest; home: Household; canRemove: boolean; ws: string }) {
+  const { households } = useAdmin();
   const [draft, setDraft] = useState({ name: g.name, dietary: g.dietary ?? '', contact: g.contact ?? '', notes: g.notes ?? '' });
-  useEffect(() => setDraft({ name: g.name, dietary: g.dietary ?? '', contact: g.contact ?? '', notes: g.notes ?? '' }), [g.name, g.dietary, g.contact, g.notes]);
+  useEffect(() => {
+    setDraft({ name: g.name, dietary: g.dietary ?? '', contact: g.contact ?? '', notes: g.notes ?? '' });
+  }, [g.name, g.dietary, g.contact, g.notes]);
   const save = (k: keyof typeof draft) => {
     const v = draft[k].trim();
     if (k === 'name' && !v) return setDraft({ ...draft, name: g.name });
@@ -456,6 +460,31 @@ function MemberCard({ g, canRemove, ws }: { g: Guest; canRemove: boolean; ws: st
         {text('dietary', 'Dietary', 'Vegetarian, allergies…')}
         {text('contact', 'Contact', 'Phone or email')}
       </div>
+      {!g.plusOneOf && (
+        <label className="afield">
+          Household (shares one invite link)
+          <select
+            value={home.key}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === home.key) return;
+              const target = v === '__own' ? null : households.find((x) => x.key === v) ?? null;
+              const label = target ? target.name : 'their own household';
+              if (confirm(`Move ${g.name} to ${label}? They’ll answer through that household’s link.`)) moveGuest(ws, g, target);
+            }}
+          >
+            <option value={home.key}>{home.name} (current)</option>
+            {home.members.length > 1 && <option value="__own">Their own household</option>}
+            {households
+              .filter((x) => x.key !== home.key)
+              .map((x) => (
+                <option key={x.key} value={x.key}>
+                  {x.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
       {text('notes', 'Notes')}
     </fieldset>
   );

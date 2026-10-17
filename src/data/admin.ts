@@ -150,9 +150,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Keep invites in step with the guest list, and copy RSVP answers back into it.
   const syncing = useRef(false);
+  const commits = useRef<number[]>([]);
   const [syncTick, setSyncTick] = useState(0);
   useEffect(() => {
     if (!loaded || !workspaceId || syncing.current) return;
+    // Safety brake for the free plan's daily write quota: a healthy sync settles after a
+    // few commits, so many in a minute means something keeps re-writing.
+    const now = Date.now();
+    commits.current = commits.current.filter((t) => now - t < 60_000);
+    if (commits.current.length >= 15) {
+      setError('Automatic sync paused: it kept writing the same changes. Reload the page; if this message comes back, send the browser console log to the developer.');
+      return;
+    }
     const ws = workspaceId;
     const batch = writeBatch(db);
     let ops = 0;
@@ -165,6 +174,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         continue;
       }
       if (inviteIsStale(inv, h)) {
+        console.info('[sync] invite out of date', inv.token, { stored: inv, wanted: inviteShape(h) });
         batch.update(doc(db, 'invites', inv.token), inviteShape(h));
         ops++;
       }
@@ -181,6 +191,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       if (ops > 400) break;
     }
     if (!ops) return;
+    console.info(`[sync] writing ${ops} change(s)`);
+    commits.current.push(now);
     syncing.current = true;
     batch.commit().then(
       () => {
@@ -283,6 +295,26 @@ export async function addMember(ws: string, h: Household, name: string) {
 
 export const renameGuest = (ws: string, id: string, name: string) => updateDoc(doc(wsCol(ws, 'guests'), id), { name: name.trim() });
 export const updateGuest = (ws: string, id: string, patch: Partial<Guest>) => updateDoc(doc(wsCol(ws, 'guests'), id), patch);
+
+/**
+ * Move one person into another household, or into a household of their own (target null).
+ * Joining a single guest turns the two of them into a new party.
+ */
+export async function moveGuest(ws: string, g: Guest, target: Household | null) {
+  const batch = writeBatch(db);
+  const ref = doc(wsCol(ws, 'guests'), g.id);
+  if (!target) {
+    batch.update(ref, { partyId: null });
+  } else if (target.party) {
+    batch.update(ref, { partyId: target.party.id });
+  } else {
+    const partyId = uid();
+    batch.set(doc(wsCol(ws, 'parties'), partyId), { id: partyId, name: `${target.name} & ${g.name}`, type: 'couple', color: '#c98b86' });
+    batch.update(doc(wsCol(ws, 'guests'), target.members[0].id), { partyId });
+    batch.update(ref, { partyId });
+  }
+  await batch.commit();
+}
 
 export async function setHouseholdSide(ws: string, h: Household, side: string) {
   const batch = writeBatch(db);

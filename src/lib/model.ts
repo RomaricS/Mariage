@@ -27,6 +27,8 @@ export interface Party {
 export interface InviteGuest {
   id: string;
   name: string;
+  /** Shown as a "Child" tag on the RSVP page. */
+  child?: boolean;
 }
 
 export type Answer = 'yes' | 'no';

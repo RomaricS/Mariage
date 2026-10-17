@@ -35,7 +35,11 @@ function RsvpFlow({ invite }: { invite: Invite }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(false);
 
-  useEffect(() => window.scrollTo(0, 0), [step]);
+  // Braces matter: an effect may only return a cleanup function. Returning scrollTo's
+  // result crashed React in browsers where it isn't undefined.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
 
   const closed = rsvpIsClosed(c);
   const allAnswered = invite.guests.every((g) => attendees[g.id]);
@@ -131,6 +135,7 @@ function RsvpFlow({ invite }: { invite: Invite }) {
                   <div className="guest-card__who">
                     <span className="avatar">{g.name[0]}</span>
                     <span>{g.name}</span>
+                    {g.child && <span className="child-tag">{t('child')}</span>}
                   </div>
                   <div className="choice" role="group" aria-label={g.name}>
                     <button

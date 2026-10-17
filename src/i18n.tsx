@@ -109,6 +109,7 @@ const ui = {
   attending: { en: 'Attending', fr: 'Présent(e)' },
   notAttending: { en: 'Not attending', fr: 'Absent(e)' },
   plusOne: { en: 'Plus-one', fr: 'Invité(e)' },
+  child: { en: 'Child', fr: 'Enfant' },
   closed: { en: 'RSVPs are closed', fr: 'Les réponses sont closes' },
   closedText: { en: 'Please contact us directly if something changed.', fr: 'Contactez-nous directement si quelque chose a changé.' },
   sendError: { en: 'Something went wrong. Please try again.', fr: 'Une erreur est survenue. Réessayez.' },

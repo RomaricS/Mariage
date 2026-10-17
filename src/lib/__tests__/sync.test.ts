@@ -68,6 +68,27 @@ describe('invite staleness', () => {
   });
 });
 
+describe('invite guests', () => {
+  it('marks children', () => {
+    const [h] = buildHouseholds([...guests.slice(0, 2), g('k', 'Kid', { partyId: 'p1', kind: 'child' })], parties);
+    expect(inviteShape(h).guests.map((x) => x.child)).toEqual([false, false, true]);
+  });
+
+  it('is not stale when the database returns fields in another order', () => {
+    const [h] = buildHouseholds(guests, parties);
+    const shape = inviteShape(h);
+    const reordered = shape.guests.map((x) => ({ name: x.name, child: x.child, id: x.id }));
+    expect(inviteIsStale(invite('p1', { ...shape, guests: reordered }), h)).toBe(false);
+  });
+
+  it('treats a missing child flag as not a child (older invites)', () => {
+    const [h] = buildHouseholds(guests, parties);
+    const shape = inviteShape(h);
+    const old = shape.guests.map(({ id, name }) => ({ id, name }));
+    expect(inviteIsStale(invite('p1', { ...shape, guests: old }), h)).toBe(false);
+  });
+});
+
 describe('responseToGuestWrites', () => {
   const [h] = buildHouseholds(guests, parties);
 

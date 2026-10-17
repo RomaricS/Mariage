@@ -26,10 +26,11 @@ export const DEMO_TOKEN = 'demo';
 const demoInvite = (): Invite => ({
   token: DEMO_TOKEN,
   householdKey: 'demo',
-  householdName: 'Camille & Hugo',
+  householdName: 'The Martin family',
   guests: [
     { id: 'demo-a', name: 'Camille Martin' },
     { id: 'demo-b', name: 'Hugo Martin' },
+    { id: 'demo-c', name: 'Léa Martin', child: true },
   ],
   plusOneAllowed: true,
   createdAt: 0,
@@ -56,6 +57,7 @@ export async function markOpened(invite: Invite) {
 }
 
 export async function submitResponse(token: string, response: InviteResponse) {
-  if (token === DEMO_TOKEN) return;
+  // The demo pretends to save, with a realistic network delay.
+  if (token === DEMO_TOKEN) return new Promise<void>((r) => setTimeout(r, 700));
   await updateDoc(doc(db, 'invites', token), { response });
 }
